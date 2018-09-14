@@ -1,5 +1,5 @@
 {
-    "name": "go-people/module-shipping",
+    "name": "go-people/magento-2",
     "description": "The GoPeople_Shipping module provides the models and interfaces for a live carrier pricing and integration",
     "require": {
         "php": "7.0.2|7.0.4|~7.0.6",
