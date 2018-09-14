@@ -1,0 +1,26 @@
+#
+# Copyright © 2018 Ekky Software Pty Ltd. All rights reserved.
+# Please visit http://www.ekkysoftware.com
+# See COPYING.txt for license details.
+#
+# Various IDE & OS files that should never be committed
+.DS_Store
+*.swp
+*.lock
+__MACOSX
+.idea
+/nbproject/*
+.project
+.buildpath
+.thumbs
+Thumbs.db
+build.properties
+.project
+.settings
+.buildpath
+/_notes/*
+*.tgz
+*.gz
+*.tar.gz
+
+
