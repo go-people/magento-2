@@ -130,7 +130,7 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
      */
     public function getAllowedMethods()
     {
-        \Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug("At GoPeople\Shipping\Model\Carrier::getAllowedMethods");
+        //\Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug("At GoPeople\Shipping\Model\Carrier::getAllowedMethods");
         return ['fasterdelivery' => $this->getConfigData('name')];
     }
 
@@ -227,7 +227,7 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
         $response = $client->send($request);
         //\Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug(var_export($response->getContent(),true));
         $data = $this->_jsonHelper->jsonDecode($response->getContent());
-        \Magento\Framework\App\ObjectManager::getInstance()->get('Ekky\Extras\Helper\Logger')->logVariable($data);
+        //\Magento\Framework\App\ObjectManager::getInstance()->get('Ekky\Extras\Helper\Logger')->logVariable($data);
         if(isset($data['errorCode']) && 0 < (int)$data['errorCode']){
             $error = $this->_rateErrorFactory->create();
             $error->setCarrier($this->_code);
@@ -292,6 +292,5 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
     {
 
         \Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug("At GoPeople\Shipping\Model\Carrier::_doShipmentRequest");
-        \Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug(var_export($request,true));
     }
 }
