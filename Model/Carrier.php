@@ -171,14 +171,18 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
         $billing = $quote->getBillingAddress();
         //\Magento\Framework\App\ObjectManager::getInstance()->get('Ekky\Extras\Helper\Logger')->logVariable($quote);
         //\Magento\Framework\App\ObjectManager::getInstance()->get('Ekky\Extras\Helper\Logger')->logVariable($quote->getBillingAddress());
-
+        $region = $this->_scopeConfig->getValue(Config::XML_PATH_ORIGIN_REGION_ID,ScopeInterface::SCOPE_STORE,$request->getStoreId());
+        if(0 < (int)$region){
+            $region = $this->_regionFactory->create()->load($region);
+            $region = $region->getName();
+        }
         $params = [
            'addressFrom' => [
                 'unit'          => $this->_scopeConfig->getValue('shipping/origin/street_line2',ScopeInterface::SCOPE_STORE,$request->getStoreId()),
                 'address1'      => $this->_scopeConfig->getValue('shipping/origin/street_line1',ScopeInterface::SCOPE_STORE,$request->getStoreId()),
                 'suburb'        => $this->_scopeConfig->getValue(Config::XML_PATH_ORIGIN_CITY,ScopeInterface::SCOPE_STORE,$request->getStoreId()),
                 'postcode'      => $this->_scopeConfig->getValue(Config::XML_PATH_ORIGIN_POSTCODE,ScopeInterface::SCOPE_STORE,$request->getStoreId()),
-                'state'         => $this->_scopeConfig->getValue(Config::XML_PATH_ORIGIN_REGION_ID,ScopeInterface::SCOPE_STORE,$request->getStoreId()),
+                'state'         => $region,
                 'country'       => $this->_scopeConfig->getValue(Config::XML_PATH_ORIGIN_COUNTRY_ID,ScopeInterface::SCOPE_STORE,$request->getStoreId()), 
                 'contactName'   => $this->_scopeConfig->getValue(Information::XML_PATH_STORE_INFO_NAME,ScopeInterface::SCOPE_STORE,$request->getStoreId()),
                 'contactNumber' => $this->_scopeConfig->getValue(Information::XML_PATH_STORE_INFO_PHONE,ScopeInterface::SCOPE_STORE,$request->getStoreId()),
