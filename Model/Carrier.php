@@ -135,6 +135,43 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
     }
 
     /**
+     * Get Go People End Point
+     *
+     * @return array
+     */
+    public function getEndPoint()
+    {
+        return ((bool)$this->getConfigData('sandbox_mode') ? $this->_defaultSandboxUrl : $this->_defaultGatewayUrl);
+    }
+
+    /**
+     * Get Shipping origin
+     *
+     * @return array
+     */
+    public function getShippingOrigin($storeId){
+        $region = $this->_scopeConfig->getValue(Config::XML_PATH_ORIGIN_REGION_ID,ScopeInterface::SCOPE_STORE,$storeId);
+        if(0 < (int)$region){
+            $region = $this->_regionFactory->create()->load($region);
+            $region = $region->getName();
+        }
+        return [
+            'unit'          => $this->_scopeConfig->getValue('shipping/origin/street_line2',ScopeInterface::SCOPE_STORE,$storeId),
+            'address1'      => $this->_scopeConfig->getValue('shipping/origin/street_line1',ScopeInterface::SCOPE_STORE,$storeId),
+            'suburb'        => $this->_scopeConfig->getValue(Config::XML_PATH_ORIGIN_CITY,ScopeInterface::SCOPE_STORE,$storeId),
+            'postcode'      => $this->_scopeConfig->getValue(Config::XML_PATH_ORIGIN_POSTCODE,ScopeInterface::SCOPE_STORE,$storeId),
+            'state'         => $region,
+            'country'       => $this->_scopeConfig->getValue(Config::XML_PATH_ORIGIN_COUNTRY_ID,ScopeInterface::SCOPE_STORE,$storeId), 
+            'contactName'   => $this->_scopeConfig->getValue(Information::XML_PATH_STORE_INFO_NAME,ScopeInterface::SCOPE_STORE,$storeId),
+            'contactNumber' => $this->_scopeConfig->getValue(Information::XML_PATH_STORE_INFO_PHONE,ScopeInterface::SCOPE_STORE,$storeId),
+            'sendUpdateSMS' => false,
+            'contactEmail'  => $this->_scopeConfig->getValue('trans_email/ident_'.$this->_scopeConfig->getValue(Information::XML_PATH_STORE_INFO_NAME,ScopeInterface::SCOPE_STORE,$storeId).'/email',ScopeInterface::SCOPE_STORE,$storeId),
+            'isCommercial'  => true,
+            'companyName'   => $this->_scopeConfig->getValue(Information::XML_PATH_STORE_INFO_NAME,ScopeInterface::SCOPE_STORE,$storeId),
+        ];
+    }
+
+    /**
      * Collect and get rates/errors
      *
      * @param RateRequest $request
@@ -149,7 +186,7 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
 
         $httpHeaders = new \Zend\Http\Headers();
         $httpHeaders->addHeaders([
-           'Authorization' => 'bearer ' . $this->getConfigData('rest_token'),
+           'Authorization' => 'bearer ' . $this->_scopeConfig->getValue('carriers/'.static::CODE.'/rest_token',ScopeInterface::SCOPE_STORE,$request->getStoreId()),
            'Accept' => 'application/json',
            'Content-Type' => 'application/json'
         ]);
@@ -159,55 +196,40 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
         foreach($request->getAllItems() as $item){
             if(!isset($quote)) $quote = $item->getQuote();
             $parcels[] = [
-                    'type'   => "custom",
-                    'number' => $item->getQty(),
-                    'width'  => 0,
-                    'height' => 0,
-                    'length' => 0,
-                    'weight' => $item->getProduct()->getWeight(),
-                ];
+                'type'   => "custom",
+                'number' => $item->getQty(),
+                'width'  => 0,
+                'height' => 0,
+                'length' => 0,
+                'weight' => $item->getProduct()->getWeight(),
+            ];
         }
         if(!isset($quote)) return $this->getErrorMessage();
         $billing = $quote->getBillingAddress();
-        //\Magento\Framework\App\ObjectManager::getInstance()->get('Ekky\Extras\Helper\Logger')->logVariable($quote);
-        //\Magento\Framework\App\ObjectManager::getInstance()->get('Ekky\Extras\Helper\Logger')->logVariable($quote->getBillingAddress());
         $region = $this->_scopeConfig->getValue(Config::XML_PATH_ORIGIN_REGION_ID,ScopeInterface::SCOPE_STORE,$request->getStoreId());
         if(0 < (int)$region){
             $region = $this->_regionFactory->create()->load($region);
             $region = $region->getName();
         }
+        $streets = explode("\n",$request->getStreet());
         $params = [
-           'addressFrom' => [
-                'unit'          => $this->_scopeConfig->getValue('shipping/origin/street_line2',ScopeInterface::SCOPE_STORE,$request->getStoreId()),
-                'address1'      => $this->_scopeConfig->getValue('shipping/origin/street_line1',ScopeInterface::SCOPE_STORE,$request->getStoreId()),
-                'suburb'        => $this->_scopeConfig->getValue(Config::XML_PATH_ORIGIN_CITY,ScopeInterface::SCOPE_STORE,$request->getStoreId()),
-                'postcode'      => $this->_scopeConfig->getValue(Config::XML_PATH_ORIGIN_POSTCODE,ScopeInterface::SCOPE_STORE,$request->getStoreId()),
-                'state'         => $region,
-                'country'       => $this->_scopeConfig->getValue(Config::XML_PATH_ORIGIN_COUNTRY_ID,ScopeInterface::SCOPE_STORE,$request->getStoreId()), 
-                'contactName'   => $this->_scopeConfig->getValue(Information::XML_PATH_STORE_INFO_NAME,ScopeInterface::SCOPE_STORE,$request->getStoreId()),
-                'contactNumber' => $this->_scopeConfig->getValue(Information::XML_PATH_STORE_INFO_PHONE,ScopeInterface::SCOPE_STORE,$request->getStoreId()),
-                'sendUpdateSMS' => false,
-                'contactEmail'  => $this->_scopeConfig->getValue('trans_email/ident_'.$this->_scopeConfig->getValue(Information::XML_PATH_STORE_INFO_NAME,ScopeInterface::SCOPE_STORE,$request->getStoreId()).'/email',
-                                                                 ScopeInterface::SCOPE_STORE,$request->getStoreId()),
-                'isCommercial'  => true,
-                'companyName'   => $this->_scopeConfig->getValue(Information::XML_PATH_STORE_INFO_NAME,ScopeInterface::SCOPE_STORE,$request->getStoreId()),
-            ],
-            'addressTo' => [
-                'unit'          => $request->getDestStreet(),
-                'address1'      => $request->getDestStreet(),
+            'addressFrom' => $this->getShippingOrigin($request->getStoreId()),
+            'addressTo'   => [
+                'unit'          => isset($streets[1]) ? $streets[1] : '',
+                'address1'      => isset($streets[0]) ? $streets[0] : '',
                 'suburb'        => $request->getDestCity(),
                 'state'         => $request->getDestRegionCode(),
                 'postcode'      => $request->getDestPostcode(),
-                'contactName'   => trim($billing->getPrefix().' '.$billing->getFirstname().' '.$billing->getFirstname()),
+                'contactName'   => trim($billing->getPrefix().' '.$billing->getFirstname().' '.$billing->getLastname()),
                 'contactNumber' => $billing->getTelephone(),
                 'sendUpdateSMS' => true,
                 'contactEmail'  => $quote->getCustomerEmail(),
                 'isCommercial'  => false,
                 'companyName'   => $billing->getCompany()
             ],
-            'parcels' => $parcels,
+            'parcels'     => $parcels,
             'pickUpAfter' => $this->getEstimatedPickupTime(),
-            'dropOffBy'   => "2018-10-08 17:00:00+1000",
+            'dropOffBy'   => $this->getEstimatedDropOffTime(),
             'onDemand'    => true,
             'setRun'      => true
         ];
@@ -216,7 +238,7 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
 
         $request = new \Zend\Http\Request();
         $request->setHeaders($httpHeaders)
-                ->setUri(((bool)$this->getConfigData('sandbox_mode') ? $this->_defaultSandboxUrl : $this->_defaultGatewayUrl).'quote')
+                ->setUri($this->getEndPoint().'quote')
                 ->setMethod(\Zend\Http\Request::METHOD_POST)
                 ->setContent($this->_jsonHelper->jsonEncode($params));
 
@@ -237,21 +259,49 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
             $error->setCarrier($this->_code);
             $error->setCarrierTitle($this->getConfigData('title'));
             $errorMsg = isset($data['message']) && !empty($data['message']) ? $data['message'] : $this->getConfigData('specificerrmsg');
-            $error->setErrorMessage(__($errorMsg ? $errorMsg : 'Sorry, but we can\'t deliver to the destination country with this shipping module.'));
+            $error->setErrorMessage(__($errorMsg ? $errorMsg : 'Sorry, but we can\'t deliver to the destination with this shipping module.'));
             return $error;
         }
         if(isset($data['result']) && is_array($data['result']) && 0 < count($data['result'])){
             $result = $this->_rateFactory->create();
-            foreach ($data['result']['onDemandPriceList'] as $onDemand) {
-                /* @var $rate \Magento\Quote\Model\Quote\Address\RateResult\Method */
-                $rate = $this->_rateMethodFactory->create();
-                $rate->setCarrier(self::CODE);
-                $rate->setCarrierTitle($this->getConfigData('title'));
-                $rate->setMethod($this->_slugify($onDemand['serviceName']));
-                $rate->setMethodTitle(ucwords($onDemand['serviceName']));
-                $rate->setCost($onDemand['amount']);
-                $rate->setPrice($onDemand['amount']);
-                $result->append($rate);
+            if(isset($data['result']['onDemandPriceList']) && is_array($data['result']['onDemandPriceList'])){
+                foreach ($data['result']['onDemandPriceList'] as $onDemand) {
+                    /* @var $rate \Magento\Quote\Model\Quote\Address\RateResult\Method */
+                    $rate = $this->_rateMethodFactory->create();
+                    $rate->setCarrier(self::CODE);
+                    $rate->setCarrierTitle($this->getConfigData('title'));
+                    $rate->setMethod($this->_slugify($onDemand['serviceName']));
+                    $rate->setMethodTitle(ucwords($onDemand['serviceName']));
+                    $rate->setCost($onDemand['amount']);
+                    $rate->setPrice($onDemand['amount']);
+                    $result->append($rate);
+                }
+            }
+            if(isset($data['result']['setRunPriceList']) && is_array($data['result']['setRunPriceList'])){
+                foreach ($data['result']['setRunPriceList'] as $onDemand) {
+                    /* @var $rate \Magento\Quote\Model\Quote\Address\RateResult\Method */
+                    $rate = $this->_rateMethodFactory->create();
+                    $rate->setCarrier(self::CODE);
+                    $rate->setCarrierTitle($this->getConfigData('title'));
+                    $rate->setMethod($this->_slugify($onDemand['serviceName']));
+                    $rate->setMethodTitle(ucwords($onDemand['serviceName']));
+                    $rate->setCost($onDemand['amount']);
+                    $rate->setPrice($onDemand['amount']);
+                    $result->append($rate);
+                }
+            }
+            if(isset($data['result']['shiftList']) && is_array($data['result']['setRunPriceList'])){
+                foreach ($data['result']['shiftList'] as $onDemand) {
+                    /* @var $rate \Magento\Quote\Model\Quote\Address\RateResult\Method */
+                    $rate = $this->_rateMethodFactory->create();
+                    $rate->setCarrier(self::CODE);
+                    $rate->setCarrierTitle($this->getConfigData('title'));
+                    $rate->setMethod($this->_slugify($onDemand['serviceName']));
+                    $rate->setMethodTitle(ucwords($onDemand['serviceName']));
+                    $rate->setCost($onDemand['amount']);
+                    $rate->setPrice($onDemand['amount']);
+                    $result->append($rate);
+                }
             }
             return $result;
         }
@@ -271,18 +321,24 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
     }
 
     /**
+     * Estimate the pickup time from the current order
+     *
+     * @param int $storeId
+     * @return string
+     */
+    protected function _getEstimatedDropOffTime($storeId){
+        $minHandlingTime = $this->getConfigData('min_handling');
+        //$minHandlingTime = $this->_scopeConfig->getValue('shipping/origin/street_line2',ScopeInterface::SCOPE_STORE,$storeId);
+    }
+
+    /**
      * return a safe string
      *
      * @param string $text
      * @return string
      */
     protected function _slugify($text){
-        $text = preg_replace('~[^\pL\d]+~u', '-', $text);
-        $text = iconv('utf-8', 'us-ascii//TRANSLIT', $text);
-        $text = preg_replace('~[^-\w]+~', '', $text);
-        $text = trim($text, '-');
-        $text = preg_replace('~-+~', '-', $text);
-        $text = strtolower($text);
+        $text = strtolower(preg_replace('~-+~', '-', trim(preg_replace('~[^-\w]+~', '', iconv('utf-8', 'us-ascii//TRANSLIT', preg_replace('~[^\pL\d]+~u', '-', $text))), '-')));
         return empty($text) ? 'n-a' : $text;
     }
 
