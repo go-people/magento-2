@@ -48,7 +48,7 @@ class SalesOrderPaymentPay implements ObserverInterface
 
         $invoice = $observer->getEvent()->getInvoice();
         $order = $invoice->getOrder();
-        $shipping = $invoice->getShippingAddress();
+        $shipping = $order->getShippingAddress();
         $method = $order->getShippingMethod();
         $code_l = strlen($this->_carrier::CODE);
         if(substr($method,0,$code_l) == $this->_carrier::CODE){
@@ -56,7 +56,7 @@ class SalesOrderPaymentPay implements ObserverInterface
 
             $httpHeaders = new \Zend\Http\Headers();
             $httpHeaders->addHeaders([
-               'Authorization' => 'bearer ' . $this->_scopeConfig->getValue('carriers/'.$this->_carrier::CODE.'/rest_token',ScopeInterface::SCOPE_STORE,$invoice->getStoreId()),
+               'Authorization' => 'bearer ' . $this->_scopeConfig->getValue('carriers/'.$this->_carrier::CODE.'/rest_token',ScopeInterface::SCOPE_STORE,$order->getStoreId()),
                'Accept' => 'application/json',
                'Content-Type' => 'application/json'
             ]);
@@ -68,7 +68,7 @@ class SalesOrderPaymentPay implements ObserverInterface
             $params = [
                 'source'       => "magento2",
                 'orderNumber'  => $order->getIncrementId(),
-                'addressFrom'  => $this->_carrier->getShippingOrigin($invoice->getStoreId()),
+                'addressFrom'  => $this->_carrier->getShippingOrigin($order->getStoreId()),
                 'addressTo'    => [
                     'unit'          => isset($shipping->getStreet()[1]) ? $shipping->getStreet()[1] : '',
                     'address1'      => isset($shipping->getStreet()[0]) ? $shipping->getStreet()[0] : '',
@@ -107,8 +107,10 @@ class SalesOrderPaymentPay implements ObserverInterface
                     isset($data['message']) && !empty($data['message']) ? $data['message'] : 'Sorry, but we can\'t deliver to the destination with this shipping module.'
                 ));
             }
+            else{
+                $order->setGopeopleCartId(1);//update from response once available
+            }
             //\Magento\Framework\App\ObjectManager::getInstance()->get('Ekky\Extras\Helper\Logger')->logVariable($response);
-
         }
     }
 
