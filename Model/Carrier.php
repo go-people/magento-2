@@ -181,8 +181,8 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
         $httpHeaders = new \Zend\Http\Headers();
         $httpHeaders->addHeaders([
            'Authorization' => 'bearer ' . $this->_scopeConfig->getValue('carriers/'.static::CODE.'/rest_token',ScopeInterface::SCOPE_STORE,$storeId),
-           'Accept' => 'application/json',
-           'Content-Type' => 'application/json'
+           'Accept'        => 'application/json',
+           'Content-Type'  => 'application/json'
         ]);
         return $httpHeaders;
     }
@@ -219,9 +219,7 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
             $parcels[] = [
                 'type'   => "custom",
                 'number' => $item->getQty(),
-                'width'  => 0,
-                'height' => 0,
-                'length' => 0,
+                'width' => 0, 'height' => 0, 'length' => 0,
                 'weight' => $this->getWeightInKG($request->getStoreId(),$item->getProduct()->getWeight()),
             ];
         }
@@ -323,7 +321,7 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
                     $result->append($rate);
                 }
             }
-            return $result;
+            if(!empty($result->getAllRates())) return $result;
         }
  
         return false;//return no quote
