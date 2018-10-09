@@ -54,13 +54,6 @@ class SalesOrderPaymentPay implements ObserverInterface
         if(substr($method,0,$code_l) == $this->_carrier::CODE){
             $method = str_replace('-',' ',substr($method,$code_l+1));
 
-            $httpHeaders = new \Zend\Http\Headers();
-            $httpHeaders->addHeaders([
-               'Authorization' => 'bearer ' . $this->_scopeConfig->getValue('carriers/'.$this->_carrier::CODE.'/rest_token',ScopeInterface::SCOPE_STORE,$order->getStoreId()),
-               'Accept' => 'application/json',
-               'Content-Type' => 'application/json'
-            ]);
-
             $parcels = [];
             foreach($order->getAllItems() as $item){
                 if (0 < $item->getQtyToShip()) $parcels[] = ['type'=>"custom", 'number'=>$item->getQtyOrdered(), 'width'=>0, 'height'=>0, 'length'=>0, 'weight'=>$item->getWeight()];
@@ -87,30 +80,32 @@ class SalesOrderPaymentPay implements ObserverInterface
             ];
 
             $request = new \Zend\Http\Request();
-            $request->setHeaders($httpHeaders)
+            $request->setHeaders($this->_carrier->getHttpHeaders($order->getStoreId()))
                     ->setUri($this->_carrier->getEndPoint().'shoppingcart')
                     ->setMethod(\Zend\Http\Request::METHOD_POST)
                     ->setContent($this->_jsonHelper->jsonEncode($params));
 
             $client = new \Zend\Http\Client();
             $client->setOptions([
-               'adapter'   => 'Zend\Http\Client\Adapter\Curl',
-               'curloptions' => [CURLOPT_FOLLOWLOCATION => true],
+               'adapter'      => 'Zend\Http\Client\Adapter\Curl',
+               'curloptions'  => [CURLOPT_FOLLOWLOCATION => true],
                'maxredirects' => 5,
-               'timeout' => 30
+               'timeout'      => 30
             ]);
 
             $response = $client->send($request);
             $data = $this->_jsonHelper->jsonDecode($response->getContent());
-            if(isset($data['errorCode']) && 0 < (int)$data['errorCode']){
-                throw new \Magento\Framework\Exception\LocalizedException(__(
-                    isset($data['message']) && !empty($data['message']) ? $data['message'] : 'Sorry, but we can\'t deliver to the destination with this shipping module.'
-                ));
+            if(isset($data['result']) && is_array($data['result'])){
+                if(isset($data['result']['guid'])) $order->setGopeopleCartId($data['result']['guid']);//update from response once available
+                else $order->setGopeopleCartId('none');//prevent repeated export
+                $order->save();
             }
-            else{
-                $order->setGopeopleCartId(1);//update from response once available
-            }
-            //\Magento\Framework\App\ObjectManager::getInstance()->get('Ekky\Extras\Helper\Logger')->logVariable($response);
+            //ignore errors, accept the order and rely on the cron to synchronise the order
+            //if(isset($data['errorCode']) && 0 < (int)$data['errorCode']){
+            //    throw new \Magento\Framework\Exception\LocalizedException(__(
+            //        isset($data['message']) && !empty($data['message']) ? $data['message'] : 'Sorry, but we can\'t deliver to the destination with this shipping module.'
+            //    ));
+            //}
         }
     }
 

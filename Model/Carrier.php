@@ -20,7 +20,7 @@ use Magento\Shipping\Model\Rate\Result;
 use Magento\Shipping\Model\Simplexml\Element;
 
 /**
- * UPS shipping implementation
+ * Go People shipping implementation
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
@@ -171,6 +171,22 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
         ];
     }
 
+
+    /**
+     * Get Http Headers
+     *
+     * @return \Zend\Http\Headers
+     */
+     public function getHttpHeaders($storeId){
+        $httpHeaders = new \Zend\Http\Headers();
+        $httpHeaders->addHeaders([
+           'Authorization' => 'bearer ' . $this->_scopeConfig->getValue('carriers/'.static::CODE.'/rest_token',ScopeInterface::SCOPE_STORE,$storeId),
+           'Accept' => 'application/json',
+           'Content-Type' => 'application/json'
+        ]);
+        return $httpHeaders;
+    }
+
     /**
      * Collect and get rates/errors
      *
@@ -183,13 +199,6 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
         //\Magento\Framework\App\ObjectManager::getInstance()->get('Ekky\Extras\Helper\Logger')->logVariable($request);
 
         if (!$this->canCollectRates()) return $this->getErrorMessage();
-
-        $httpHeaders = new \Zend\Http\Headers();
-        $httpHeaders->addHeaders([
-           'Authorization' => 'bearer ' . $this->_scopeConfig->getValue('carriers/'.static::CODE.'/rest_token',ScopeInterface::SCOPE_STORE,$request->getStoreId()),
-           'Accept' => 'application/json',
-           'Content-Type' => 'application/json'
-        ]);
 
         $quote = null;
         $parcels = [];
@@ -236,24 +245,22 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
 
         //\Magento\Framework\App\ObjectManager::getInstance()->get('Ekky\Extras\Helper\Logger')->logVariable($params);
 
-        $request = new \Zend\Http\Request();
-        $request->setHeaders($httpHeaders)
-                ->setUri($this->getEndPoint().'quote')
-                ->setMethod(\Zend\Http\Request::METHOD_POST)
-                ->setContent($this->_jsonHelper->jsonEncode($params));
+        $httpRequest = new \Zend\Http\Request();
+        $httpRequest->setHeaders($this->getHttpHeaders($request->getStoreId()))
+                    ->setUri($this->getEndPoint().'quote')
+                    ->setMethod(\Zend\Http\Request::METHOD_POST)
+                    ->setContent($this->_jsonHelper->jsonEncode($params));
 
         $client = new \Zend\Http\Client();
         $client->setOptions([
-           'adapter'   => 'Zend\Http\Client\Adapter\Curl',
-           'curloptions' => [CURLOPT_FOLLOWLOCATION => true],
+           'adapter'      => 'Zend\Http\Client\Adapter\Curl',
+           'curloptions'  => [CURLOPT_FOLLOWLOCATION => true],
            'maxredirects' => 5,
-           'timeout' => 30
+           'timeout'      => 30
         ]);
 
-        $response = $client->send($request);
-        //\Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug(var_export($response->getContent(),true));
+        $response = $client->send($httpRequest);
         $data = $this->_jsonHelper->jsonDecode($response->getContent());
-        //\Magento\Framework\App\ObjectManager::getInstance()->get('Ekky\Extras\Helper\Logger')->logVariable($data);
         if(isset($data['errorCode']) && 0 < (int)$data['errorCode']){
             $error = $this->_rateErrorFactory->create();
             $error->setCarrier($this->_code);
@@ -263,8 +270,9 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
             return $error;
         }
         if(isset($data['result']) && is_array($data['result']) && 0 < count($data['result'])){
+            $services = explode(',',$this->getConfigData('services'));
             $result = $this->_rateFactory->create();
-            if(isset($data['result']['onDemandPriceList']) && is_array($data['result']['onDemandPriceList'])){
+            if(in_array('on_demand', $services) && isset($data['result']['onDemandPriceList']) && is_array($data['result']['onDemandPriceList'])){
                 foreach ($data['result']['onDemandPriceList'] as $onDemand) {
                     /* @var $rate \Magento\Quote\Model\Quote\Address\RateResult\Method */
                     $rate = $this->_rateMethodFactory->create();
@@ -277,29 +285,29 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
                     $result->append($rate);
                 }
             }
-            if(isset($data['result']['setRunPriceList']) && is_array($data['result']['setRunPriceList'])){
-                foreach ($data['result']['setRunPriceList'] as $onDemand) {
+            if(in_array('set_run', $services) && isset($data['result']['setRunPriceList']) && is_array($data['result']['setRunPriceList'])){
+                foreach ($data['result']['setRunPriceList'] as $setRun) {
                     /* @var $rate \Magento\Quote\Model\Quote\Address\RateResult\Method */
                     $rate = $this->_rateMethodFactory->create();
                     $rate->setCarrier(self::CODE);
                     $rate->setCarrierTitle($this->getConfigData('title'));
-                    $rate->setMethod($this->_slugify($onDemand['serviceName']));
-                    $rate->setMethodTitle(ucwords($onDemand['serviceName']));
-                    $rate->setCost($onDemand['amount']);
-                    $rate->setPrice($onDemand['amount']);
+                    $rate->setMethod($this->_slugify($setRun['serviceName']));
+                    $rate->setMethodTitle(ucwords($setRun['serviceName']));
+                    $rate->setCost($setRun['amount']);
+                    $rate->setPrice($setRun['amount']);
                     $result->append($rate);
                 }
             }
-            if(isset($data['result']['shiftList']) && is_array($data['result']['setRunPriceList'])){
-                foreach ($data['result']['shiftList'] as $onDemand) {
+            if(in_array('shift', $services) && isset($data['result']['shiftList']) && is_array($data['result']['setRunPriceList'])){
+                foreach ($data['result']['shiftList'] as $shift) {
                     /* @var $rate \Magento\Quote\Model\Quote\Address\RateResult\Method */
                     $rate = $this->_rateMethodFactory->create();
                     $rate->setCarrier(self::CODE);
                     $rate->setCarrierTitle($this->getConfigData('title'));
-                    $rate->setMethod($this->_slugify($onDemand['serviceName']));
-                    $rate->setMethodTitle(ucwords($onDemand['serviceName']));
-                    $rate->setCost($onDemand['amount']);
-                    $rate->setPrice($onDemand['amount']);
+                    $rate->setMethod($this->_slugify($shift['serviceName']));
+                    $rate->setMethodTitle(ucwords($shift['serviceName']));
+                    $rate->setCost($shift['amount']);
+                    $rate->setPrice($shift['amount']);
                     $result->append($rate);
                 }
             }

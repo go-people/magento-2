@@ -20,8 +20,13 @@
                 </field>
                 <field id="rest_token" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>Authorization Token</label>
+                    <comment model="GoPeople\Shipping\Model\Config\Comment\Callback" />
                 </field>
-                <field id="min_handling" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+                <field id="services" translate="label" type="multiselect" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Configured Services</label>
+                    <source_model>GoPeople\Shipping\Model\Config\Source\Services</source_model>
+                </field>
+                <field id="min_handling" translate="label" type="text" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Minimum Handling Time</label>
                     <comment>This is the estimated minimum time from the order to when you can have the package ready to pick, in minutes.</comment>
                 </field>

@@ -14,6 +14,7 @@
                 <max_package_weight>10</max_package_weight>
                 <active>0</active>
                 <title>Go People</title>
+                <services>on_demand,set_run,shift</services>
                 <email>general</email>
                 <specificerrmsg>This shipping method is currently unavailable. If you would like to ship using this shipping method, please contact us.</specificerrmsg>
                 <showmethod>0</showmethod>
