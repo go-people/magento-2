@@ -188,6 +188,18 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
     }
 
     /**
+     * convert weight to kilograms
+     *
+     * @return float
+     */
+     public function getWeightInKG($storeId,$weight){
+        switch($this->_scopeConfig->getValue('general/locale/weight_unit',ScopeInterface::SCOPE_STORE,$storeId)){
+        case 'lbs': $weight *= 2.2; break;
+        }
+        return $weight;
+    }
+
+    /**
      * Collect and get rates/errors
      *
      * @param RateRequest $request
@@ -210,7 +222,7 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
                 'width'  => 0,
                 'height' => 0,
                 'length' => 0,
-                'weight' => $item->getProduct()->getWeight(),
+                'weight' => $this->getWeightInKG($request->getStoreId(),$item->getProduct()->getWeight()),
             ];
         }
         if(!isset($quote)) return $this->getErrorMessage();

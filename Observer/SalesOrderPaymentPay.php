@@ -56,7 +56,12 @@ class SalesOrderPaymentPay implements ObserverInterface
 
             $parcels = [];
             foreach($order->getAllItems() as $item){
-                if (0 < $item->getQtyToShip()) $parcels[] = ['type'=>"custom", 'number'=>$item->getQtyOrdered(), 'width'=>0, 'height'=>0, 'length'=>0, 'weight'=>$item->getWeight()];
+                if (0 < $item->getQtyToShip()) $parcels[] = [
+                                                        'type'=>"custom",
+                                                        'number'=>$item->getQtyOrdered(),
+                                                        'width'=>0, 'height'=>0, 'length'=>0,
+                                                        'weight'=>$this->_carrier->getWeightInKG($order->getStoreId(),$item->getWeight())
+                                                ];
             }
             $params = [
                 'source'       => "magento2",
