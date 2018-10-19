@@ -113,6 +113,7 @@ extends \Magento\Framework\App\Action\Action
                 else $resultJson->setData($results);
             }
             catch(\Throwable $e){
+                \Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug($e->getMessage());
                 $resultJson->setHttpResponseCode(\Magento\Framework\Webapi\Exception::HTTP_INTERNAL_ERROR);
                 $resultJson->setData(['error'=>true,'message'=>$e->getMessage(),'code'=>$e->getCode()]);
             }
