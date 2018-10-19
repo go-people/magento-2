@@ -13,6 +13,9 @@ class Index
 extends \Magento\Framework\App\Action\Action
 {
 
+    /** @var \Magento\Framework\Json\Helper\Data */
+    protected $_jsonHelper;
+
     /** @var \Magento\Sales\Model\ResourceModel\Order\Collection */
     protected $_collection;
 
@@ -27,6 +30,7 @@ extends \Magento\Framework\App\Action\Action
 
     /**
      * @param \Magento\Framework\App\Action\Context $context
+     * @param \Magento\Framework\Json\Helper\Data $jsonHelper
      * @param \Magento\Sales\Model\ResourceModel\Order\CollectionFactory $collectionFactory
      * @param \Magento\Shipping\Controller\Adminhtml\Order\ShipmentLoader $shipmentLoader
      * @param \Magento\Sales\Model\Order\Shipment\ShipmentValidatorInterface $shipmentValidator
@@ -34,12 +38,14 @@ extends \Magento\Framework\App\Action\Action
      */
     public function __construct(
         \Magento\Framework\App\Action\Context $context,
+        \Magento\Framework\Json\Helper\Data $jsonHelper,
         \Magento\Sales\Model\ResourceModel\Order\CollectionFactory $collectionFactory,
         \Magento\Shipping\Controller\Adminhtml\Order\ShipmentLoader $shipmentLoader,
         \Magento\Sales\Model\Order\Shipment\ShipmentValidatorInterface $shipmentValidator,
         \Magento\Sales\Model\Order\Email\Sender\ShipmentSender $shipmentSender
     ) {
         parent::__construct($context);
+        $this->_jsonHelper = $jsonHelper;
         $this->_collection = $collectionFactory->create();
         $this->shipmentLoader = $shipmentLoader;
         $this->shipmentValidator = $shipmentValidator;
@@ -60,25 +66,29 @@ extends \Magento\Framework\App\Action\Action
             try{
                 $resutls = [];
                 // Get initial data from request
-                $cartId = (int) $this->getRequest()->getParam('jobId', false);
+                \Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug($this->getRequest()->getContent());
+                $parameters = $this->jsonHelper->jsonDecode($this->getRequest()->getContent());
+                \Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug(var_export($parameters,1));
                 $this->_collection->addFieldToFilter('shipping_method',['like' => \GoPeople\Shipping\Model\Carrier::CODE.'_%'])
-                                  ->addFieldToFilter('gopeople_cart_id',$cartId);
+                                  ->addFieldToFilter('gopeople_cart_id',$parameters['guid']);
                 foreach($this->_collection as $_order){
-                    $data = [];
-                    foreach($this->getRequest()->getParam('barcodes', []) as $item){
-                        foreach($_order->getAllItems() as $_item){
-                            if($item['text'] == $item->getSku()) $data[$_item->getId()] = $item['qty'];
+                    $shipment = ['comment_text' => ''];
+                    if(isset($parameters['shipment']) && isset($parameters['shipment']['parcels']) && is_array($parameters['shipment']['parcels'])){
+                        foreach($parameters['shipment']['parcels'] as $item){
+                            foreach($_order->getAllItems() as $_item){
+                                if($item['sku'] == $item->getSku()) $shipment['items'][$_item->getId()] = $item['number'];
+                            }
                         }
                     }
                     $tracking = [1=>[
                         'carrier_code' => \GoPeople\Shipping\Model\Carrier::CODE,
                         'title'        => "Go People",
-                        'number'       => $this->getRequest()->getParam('trackingCode'),
+                        'number'       => $parameters['trackingCode'],
                     ]];
                         
                     $this->shipmentLoader->setOrderId($_order->getId());
                     $this->shipmentLoader->setShipmentId(false);
-                    $this->shipmentLoader->setShipment($data);
+                    $this->shipmentLoader->setShipment($shipment);
                     $this->shipmentLoader->setTracking($tracking);
                     $shipment = $this->shipmentLoader->load();
                     if (!$shipment) throw new \Magento\Framework\Exception\LocalizedException(__("Unable to create shipment for order id - %1",$_order->getIncrementId()));
@@ -89,7 +99,11 @@ extends \Magento\Framework\App\Action\Action
 
                     $shipment->register();
 
-                    $this->_saveShipment($shipment);
+                    $_order->setIsInProcess(true);
+                    $transaction = $this->_objectManager->create('Magento\Framework\DB\Transaction');
+                    $transaction->addObject($shipment)
+                                ->addObject($_order)
+                                ->save();
                     $this->shipmentSender->send($shipment);
 
                     $results = ['error'=>false,'message'=>"The shipment has been created."];

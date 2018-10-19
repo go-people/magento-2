@@ -110,7 +110,7 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
      */
     public function isTrackingAvailable()
     {
-        return false;
+        return true;
     }
 
     /**
@@ -130,7 +130,6 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
      */
     public function getAllowedMethods()
     {
-        //\Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug("At GoPeople\Shipping\Model\Carrier::getAllowedMethods");
         return ['fasterdelivery' => $this->getConfigData('name')];
     }
 
@@ -264,7 +263,7 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
         $client = new \Zend\Http\Client();
         $client->setOptions([
            'adapter'      => 'Zend\Http\Client\Adapter\Curl',
-           'curloptions'  => [CURLOPT_FOLLOWLOCATION => true],
+           'curloptions'  => [CURLOPT_FOLLOWLOCATION => true, CURLOPT_USERAGENT => 'Magento 2'],
            'maxredirects' => 5,
            'timeout'      => 30
         ]);
