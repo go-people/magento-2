@@ -29,7 +29,7 @@ class Callback implements \Magento\Config\Model\Config\CommentInterface
      */
    public function getCommentText($elementValue)  //the method has to be named getCommentText
     {
-        $url = $this->_storeManager->getStore()->getBaseUrl(\Magento\Framework\UrlInterface::URL_TYPE_WEB,true);
+        $url = $this->_storeManager->getStore()->getBaseUrl(\Magento\Framework\UrlInterface::URL_TYPE_WEB,true).'gopeople/shipped';
         return "Please copy this link into your Go Poeple's Members Area:-<br/><a href='".$url."'>".$url."</a>";
     }
 }

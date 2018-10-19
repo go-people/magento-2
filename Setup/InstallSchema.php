@@ -32,7 +32,7 @@ implements InstallSchemaInterface
             $setup->getTable('sales_order'),
             'gopeople_cart_id',
             [
-                'type' => \Magento\Framework\DB\Ddl\Table::TYPE_TEXT,
+                'type'     => \Magento\Framework\DB\Ddl\Table::TYPE_TEXT,
                 'nullable' => true,
                 'length'   => 64,
                 'comment'  => 'Go People\'s internal shopping cart id'
