@@ -4,11 +4,12 @@
  * Please visit http://www.ekkysoftware.com
  * See COPYING.txt for license details.
  */
-namespace GoPeople\Shipping\Controller;
+namespace GoPeople\Shipping\Controller\Shipped;
 
+use Magento\Framework\Controller\ResultFactory;
 use Magento\Sales\Model\Order\Shipment\Validation\QuantityValidator;
 
-class Shipping 
+class Index 
 extends \Magento\Framework\App\Action\Action
 {
 
