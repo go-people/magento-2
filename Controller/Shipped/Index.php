@@ -75,14 +75,14 @@ extends \Magento\Framework\App\Action\Action
                     if(isset($parameters['shipment']) && isset($parameters['shipment']['parcels']) && is_array($parameters['shipment']['parcels'])){
                         foreach($parameters['shipment']['parcels'] as $item){
                             foreach($_order->getAllItems() as $_item){
-                                if($item['sku'] == $item->getSku()) $shipment['items'][$_item->getId()] = $item['number'];
+                                if($item['sku'] == $_item->getSku()) $shipment['items'][$_item->getId()] = $item['number'];
                             }
                         }
                     }
                     $tracking = [1=>[
                         'carrier_code' => \GoPeople\Shipping\Model\Carrier::CODE,
                         'title'        => "Go People",
-                        'number'       => $parameters['trackingCode'],
+                        'number'       => $parameters['shipment']['trackingCode'],
                     ]];
                         
                     $this->shipmentLoader->setOrderId($_order->getId());
