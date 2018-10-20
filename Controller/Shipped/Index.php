@@ -67,7 +67,6 @@ extends \Magento\Framework\App\Action\Action
                 $resutls = [];
                 // Get initial data from request
                 $parameters = $this->_jsonHelper->jsonDecode($this->getRequest()->getContent());
-                \Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug(var_export($parameters,1));
                 $this->_collection->addFieldToFilter('shipping_method',['like' => \GoPeople\Shipping\Model\Carrier::CODE.'_%'])
                                   ->addFieldToFilter('gopeople_cart_id',$parameters['guid']);
                 foreach($this->_collection as $_order){
@@ -84,7 +83,8 @@ extends \Magento\Framework\App\Action\Action
                         'title'        => "Go People",
                         'number'       => $parameters['shipment']['trackingCode'],
                     ]];
-                        
+
+                    \Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug(var_export($shipment,1));
                     $this->shipmentLoader->setOrderId($_order->getId());
                     $this->shipmentLoader->setShipmentId(false);
                     $this->shipmentLoader->setShipment($shipment);
@@ -103,6 +103,7 @@ extends \Magento\Framework\App\Action\Action
                     $transaction->addObject($shipment)
                                 ->addObject($_order)
                                 ->save();
+                    \Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug(var_export($shipment->getIncrementId(),1));
                     $this->shipmentSender->send($shipment);
 
                     $results = ['error'=>false,'message'=>"The shipment has been created."];
