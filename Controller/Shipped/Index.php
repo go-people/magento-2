@@ -66,8 +66,7 @@ extends \Magento\Framework\App\Action\Action
             try{
                 $resutls = [];
                 // Get initial data from request
-                \Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug($this->getRequest()->getContent());
-                $parameters = $this->jsonHelper->jsonDecode($this->getRequest()->getContent());
+                $parameters = $this->_jsonHelper->jsonDecode($this->getRequest()->getContent());
                 \Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug(var_export($parameters,1));
                 $this->_collection->addFieldToFilter('shipping_method',['like' => \GoPeople\Shipping\Model\Carrier::CODE.'_%'])
                                   ->addFieldToFilter('gopeople_cart_id',$parameters['guid']);
@@ -109,7 +108,7 @@ extends \Magento\Framework\App\Action\Action
                     $results = ['error'=>false,'message'=>"The shipment has been created."];
                     break;
                 }
-                if(empty($results)) throw new \Magento\Framework\Exception\LocalizedException(__("Unable to find order with cart id - %1",$cartId));
+                if(empty($results)) throw new \Magento\Framework\Exception\LocalizedException(__("Unable to find order with cart id - %1",$parameters['guid']));
                 else $resultJson->setData($results);
             }
             catch(\Throwable $e){
