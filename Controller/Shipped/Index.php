@@ -103,7 +103,6 @@ extends \Magento\Framework\App\Action\Action
                     $transaction->addObject($shipment)
                                 ->addObject($_order)
                                 ->save();
-                    \Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug(var_export(,1));
                     $this->shipmentSender->send($shipment);
 
                     $results = ['error'=>false,'message'=>"Shipment ".$shipment->getIncrementId()." has been created."];
