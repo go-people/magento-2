@@ -70,12 +70,12 @@ extends \Magento\Framework\App\Action\Action
                 $this->_collection->addFieldToFilter('shipping_method',['like' => \GoPeople\Shipping\Model\Carrier::CODE.'_%'])
                                   ->addFieldToFilter('gopeople_cart_id',$parameters['guid']);
                 foreach($this->_collection as $_order){
-                    $_order->load($_order->getId());
-                    $shipment = ['comment_text' => ''];
+                    $shipment = ['comment_text' => '', 'items'=>[]];
                     if(isset($parameters['shipment']) && isset($parameters['shipment']['parcels']) && is_array($parameters['shipment']['parcels'])){
                         foreach($parameters['shipment']['parcels'] as $item){
-                            foreach($_order->getAllItems() as $_item){
-                                if($item['sku'] == $_item->getSku()) $shipment['items'][$_item->getId()] = $item['number'];
+                            foreach($_order->getItems() as $_item){
+                                if(!$_item->getIsVirtual() && !$_item->getParentItem() && $item['sku'] == $_item->getSku())
+                                    $shipment['items'][$_item->getItemId()] = $item['number'];
                             }
                         }
                     }
