@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © 2018 Ekky Software Pty Ltd. All rights reserved.
+ * Please visit http://www.ekkysoftware.com
+ * See COPYING.txt for license details.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Email:etc/email_templates.xsd">
+    <template id="gopeople_email_shipment_template" label="New Go People Shipment" file="shipment_new.html" type="html" module="GoPeople_Shipping" area="frontend"/>
+</config>

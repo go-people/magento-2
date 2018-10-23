@@ -1,0 +1,31 @@
+<?php
+/**
+ * Copyright © 2018 Ekky Software Pty Ltd. All rights reserved.
+ * Please visit http://www.ekkysoftware.com
+ * See COPYING.txt for license details.
+ */
+
+// @codingStandardsIgnoreFile
+
+?>
+<?php $_shipment = $block->getShipment() ?>
+<?php $_order = $block->getOrder() ?>
+<?php if ($_shipment && $_order && $_shipment->getAllTracks()): ?>
+<br />
+<table class="shipment-track">
+    <thead>
+        <tr>
+            <th><?= /* @escapeNotVerified */  __('Shipped By') ?></th>
+            <th><?= /* @escapeNotVerified */  __('Tracking Number') ?></th>
+        </tr>
+    </thead>
+    <tbody>
+    <?php foreach ($_shipment->getAllTracks() as $_item): ?>
+        <tr>
+            <td><?= $block->escapeHtml($_item->getTitle()) ?>:</td>
+            <td><?= $block->getTrackingLink($_item) ?></td>
+        </tr>
+    <?php endforeach ?>
+    </tbody>
+</table>
+<?php endif; ?>
