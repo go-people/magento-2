@@ -70,6 +70,7 @@ extends \Magento\Framework\App\Action\Action
                 $this->_collection->addFieldToFilter('shipping_method',['like' => \GoPeople\Shipping\Model\Carrier::CODE.'_%'])
                                   ->addFieldToFilter('gopeople_cart_id',$parameters['guid']);
                 foreach($this->_collection as $_order){
+                    $_order->load($_order->getId());
                     $shipment = ['comment_text' => ''];
                     if(isset($parameters['shipment']) && isset($parameters['shipment']['parcels']) && is_array($parameters['shipment']['parcels'])){
                         foreach($parameters['shipment']['parcels'] as $item){
@@ -84,7 +85,6 @@ extends \Magento\Framework\App\Action\Action
                         'number'       => $parameters['shipment']['trackingCode'],
                     ]];
 
-                    \Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug(var_export($shipment,1));
                     $this->shipmentLoader->setOrderId($_order->getId());
                     $this->shipmentLoader->setShipmentId(false);
                     $this->shipmentLoader->setShipment($shipment);
@@ -103,10 +103,10 @@ extends \Magento\Framework\App\Action\Action
                     $transaction->addObject($shipment)
                                 ->addObject($_order)
                                 ->save();
-                    \Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug(var_export($shipment->getIncrementId(),1));
+                    \Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug(var_export(,1));
                     $this->shipmentSender->send($shipment);
 
-                    $results = ['error'=>false,'message'=>"The shipment has been created."];
+                    $results = ['error'=>false,'message'=>"Shipment ".$shipment->getIncrementId()." has been created."];
                     break;
                 }
                 if(empty($results)) throw new \Magento\Framework\Exception\LocalizedException(__("Unable to find order with cart id - %1",$parameters['guid']));
