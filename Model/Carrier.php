@@ -206,9 +206,6 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
      */
     public function collectRates(RateRequest $request)
     {
-        //\Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug("At GoPeople\Shipping\Model\Carrier::collectRates");
-        //\Magento\Framework\App\ObjectManager::getInstance()->get('Ekky\Extras\Helper\Logger')->logVariable($request);
-
         if (!$this->canCollectRates()) return $this->getErrorMessage();
 
         $quote = null;
@@ -246,13 +243,11 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
                 'companyName'   => $billing->getCompany()
             ],
             'parcels'     => $parcels,
-            'pickUpAfter' => $this->getEstimatedPickupTime(),
-            'dropOffBy'   => $this->getEstimatedDropOffTime(),
+            'pickUpAfter' => '',
+            'dropOffBy'   => '',
             'onDemand'    => true,
             'setRun'      => true
         ];
-
-        //\Magento\Framework\App\ObjectManager::getInstance()->get('Ekky\Extras\Helper\Logger')->logVariable($params);
 
         $httpRequest = new \Zend\Http\Request();
         $httpRequest->setHeaders($this->getHttpHeaders($request->getStoreId()))
@@ -327,25 +322,55 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
     }
 
     /**
-     * Estimate the pickup time from the current order
+     * Get tracking
      *
-     * @param int $storeId
-     * @return string
+     * @param string|string[] $trackings
+     * @return Result
      */
-    protected function _getEstimatedPickupTime($storeId){
-        $minHandlingTime = $this->getConfigData('min_handling');
-        //$minHandlingTime = $this->_scopeConfig->getValue('shipping/origin/street_line2',ScopeInterface::SCOPE_STORE,$storeId);
-    }
+    public function getTracking($trackings)
+    {
+        if (!is_array($trackings)) {
+            $trackings = [$trackings];
+        }
 
-    /**
-     * Estimate the pickup time from the current order
-     *
-     * @param int $storeId
-     * @return string
-     */
-    protected function _getEstimatedDropOffTime($storeId){
-        $minHandlingTime = $this->getConfigData('min_handling');
-        //$minHandlingTime = $this->_scopeConfig->getValue('shipping/origin/street_line2',ScopeInterface::SCOPE_STORE,$storeId);
+        $result = $this->_trackFactory->create();
+
+        foreach($trackings as $id){
+            $params = ['id'=>$id];
+            $httpRequest = new \Zend\Http\Request();
+            $httpRequest->setHeaders($this->getHttpHeaders($this->getStore()->getId()))
+                        ->setUri($this->getEndPoint().'track')
+                        ->setMethod(\Zend\Http\Request::METHOD_POST)
+                        ->setContent($this->_jsonHelper->jsonEncode($params));
+
+            $client = new \Zend\Http\Client();
+            $client->setOptions([
+               'adapter'      => 'Zend\Http\Client\Adapter\Curl',
+               'curloptions'  => [CURLOPT_FOLLOWLOCATION => true, CURLOPT_USERAGENT => 'Magento 2'],
+               'maxredirects' => 5,
+               'timeout'      => 30
+            ]);
+
+            $response = $client->send($httpRequest);
+            try{
+                $data = $this->_jsonHelper->jsonDecode($response->getContent());
+                if(isset($data['errorCode']) && 0 < (int)$data['errorCode']){
+                    $result->append($this->_trackErrorFactory->create()->setCarrier(static::CODE)->setTracking($id)
+                                         ->setCarrierTitle($this->getConfigData('title'))
+                                         ->setErrorMessage(__(isset($data['message']) && !empty($data['message']) ? $data['message'] : 'Sorry, but we can\'t find tracking informaiton for %1.',$id)));
+                }
+                $result->append($this->_trackStatusFactory->create()->setCarrier(static::CODE)->setTracking($id)
+                                     ->setCarrierTitle($this->getConfigData('title'))
+                                     ->addData(['deliverylocation'=>"Hello Go People"]);
+            }
+            catch(\Throwable $e){
+                $result->append($this->_trackErrorFactory->create()->setCarrier(static::CODE)->setTracking($id)
+                                     ->setCarrierTitle($this->getConfigData('title'))
+                                     ->setErrorMessage($e->getMessage()));
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -367,7 +392,6 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
      */
     protected function _doShipmentRequest(\Magento\Framework\DataObject $request)
     {
-
         \Magento\Framework\App\ObjectManager::getInstance()->get('Psr\Log\LoggerInterface')->debug("At GoPeople\Shipping\Model\Carrier::_doShipmentRequest");
     }
 }
