@@ -90,7 +90,7 @@ extends \Magento\Framework\App\Action\Action
                     $this->shipmentLoader->setShipment($shipment);
                     $this->shipmentLoader->setTracking($tracking);
                     $shipment = $this->shipmentLoader->load();
-                    if (!$shipment) throw new \Magento\Framework\Exception\LocalizedException(__("Unable to create shipment for order id - %1",$_order->getIncrementId()));
+                    if (!$shipment) throw new \Magento\Framework\Exception\LocalizedException(__("Unable to create shipment for order id - %1",$shipment->getOrder()->getIncrementId()));
 
                     $validationResult = $this->shipmentValidator->validate($shipment, [QuantityValidator::class]);
                     if ($validationResult->hasMessages())
@@ -98,10 +98,10 @@ extends \Magento\Framework\App\Action\Action
 
                     $shipment->register();
 
-                    $_order->setIsInProcess(true);
+                    $shipment->getOrder()->setIsInProcess(true);
                     $transaction = $this->_objectManager->create('Magento\Framework\DB\Transaction');
                     $transaction->addObject($shipment)
-                                ->addObject($_order)
+                                ->addObject($shipment->getOrder())
                                 ->save();
                     $this->shipmentSender->send($shipment);
 
