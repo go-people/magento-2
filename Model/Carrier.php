@@ -164,12 +164,11 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
             'contactName'   => $this->_scopeConfig->getValue(Information::XML_PATH_STORE_INFO_NAME,ScopeInterface::SCOPE_STORE,$storeId),
             'contactNumber' => $this->_scopeConfig->getValue(Information::XML_PATH_STORE_INFO_PHONE,ScopeInterface::SCOPE_STORE,$storeId),
             'sendUpdateSMS' => false,
-            'contactEmail'  => $this->_scopeConfig->getValue('trans_email/ident_'.$this->_scopeConfig->getValue(Information::XML_PATH_STORE_INFO_NAME,ScopeInterface::SCOPE_STORE,$storeId).'/email',ScopeInterface::SCOPE_STORE,$storeId),
+            'contactEmail'  => $this->_scopeConfig->getValue('trans_email/ident_general/email',ScopeInterface::SCOPE_STORE,$storeId),
             'isCommercial'  => true,
             'companyName'   => $this->_scopeConfig->getValue(Information::XML_PATH_STORE_INFO_NAME,ScopeInterface::SCOPE_STORE,$storeId),
         ];
     }
-
 
     /**
      * Get Http Headers
@@ -258,7 +257,8 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
         $client = new \Zend\Http\Client();
         $client->setOptions([
            'adapter'      => 'Zend\Http\Client\Adapter\Curl',
-           'curloptions'  => [CURLOPT_FOLLOWLOCATION => true, CURLOPT_USERAGENT => 'Magento 2'],
+           'useragent'    => 'Magento 2',
+           'curloptions'  => [CURLOPT_FOLLOWLOCATION => true],
            'maxredirects' => 5,
            'timeout'      => 30
         ]);
@@ -336,12 +336,10 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
         $result = $this->_trackFactory->create();
 
         foreach($trackings as $id){
-            $params = ['id'=>$id];
             $httpRequest = new \Zend\Http\Request();
             $httpRequest->setHeaders($this->getHttpHeaders($this->getStore()->getId()))
-                        ->setUri($this->getEndPoint().'track')
-                        ->setMethod(\Zend\Http\Request::METHOD_POST)
-                        ->setContent($this->_jsonHelper->jsonEncode($params));
+                        ->setUri($this->getEndPoint().'comment?trackingCode='.$id)
+                        ->setMethod(\Zend\Http\Request::METHOD_GET);
 
             $client = new \Zend\Http\Client();
             $client->setOptions([
@@ -361,7 +359,7 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
                 }
                 $result->append($this->_trackStatusFactory->create()->setCarrier(static::CODE)->setTracking($id)
                                      ->setCarrierTitle($this->getConfigData('title'))
-                                     ->addData(['deliverylocation'=>"Hello Go People"]);
+                                     ->addData(['deliverylocation'=>"Hello Go People"]));
             }
             catch(\Throwable $e){
                 $result->append($this->_trackErrorFactory->create()->setCarrier(static::CODE)->setTracking($id)
