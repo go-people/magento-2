@@ -344,22 +344,28 @@ class Carrier extends AbstractCarrierOnline implements CarrierInterface
             $client = new \Zend\Http\Client();
             $client->setOptions([
                'adapter'      => 'Zend\Http\Client\Adapter\Curl',
-               'curloptions'  => [CURLOPT_FOLLOWLOCATION => true, CURLOPT_USERAGENT => 'Magento 2'],
+               'curloptions'  => [CURLOPT_FOLLOWLOCATION => true],
                'maxredirects' => 5,
                'timeout'      => 30
             ]);
 
-            $response = $client->send($httpRequest);
             try{
+                $response = $client->send($httpRequest);
                 $data = $this->_jsonHelper->jsonDecode($response->getContent());
                 if(isset($data['errorCode']) && 0 < (int)$data['errorCode']){
                     $result->append($this->_trackErrorFactory->create()->setCarrier(static::CODE)->setTracking($id)
                                          ->setCarrierTitle($this->getConfigData('title'))
                                          ->setErrorMessage(__(isset($data['message']) && !empty($data['message']) ? $data['message'] : 'Sorry, but we can\'t find tracking informaiton for %1.',$id)));
                 }
-                $result->append($this->_trackStatusFactory->create()->setCarrier(static::CODE)->setTracking($id)
+                if(isset($data['result']) && is_array($data['result']) && 0 < count($data['result'])){
+                    $progressDetails = [];
+                    foreach ($data['result'] as $job) {
+                        $progressDetails[] = $job['createdTime'] .' - '.$job['comment']['content'];
+                    }
+                    $result->append($this->_trackStatusFactory->create()->setCarrier(static::CODE)->setTracking($id)
                                      ->setCarrierTitle($this->getConfigData('title'))
-                                     ->addData(['deliverylocation'=>"Hello Go People"]));
+                                     ->addData(['track_summary'=>implode("\n",$progressDetails)]));
+                }
             }
             catch(\Throwable $e){
                 $result->append($this->_trackErrorFactory->create()->setCarrier(static::CODE)->setTracking($id)
