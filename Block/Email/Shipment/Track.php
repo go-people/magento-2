@@ -19,7 +19,7 @@ extends \Magento\Framework\View\Element\Template
     public function getTrackingLink($_item){
         if($_item->getCarrierCode() == \GoPeople\Shipping\Model\Carrier::CODE){
             if($this->_scopeConfig->isSetFlag('carrier/'.\GoPeople\Shipping\Model\Carrier::CODE.'/sandbox_mode'))
-                return '<a href="https://members-demo.gopeople.com.au/tracking/?code='.$_item->getNumber().'">'.$this->escapeHtml($_item->getNumber()).'</a>';
+                return '<a href="https://www.gopeople.com.au/tracking/?code='.$_item->getNumber().'">'.$this->escapeHtml($_item->getNumber()).'</a>';
             return '<a href="https://www.gopeople.com.au/tracking/?code='.$_item->getNumber().'">'.$this->escapeHtml($_item->getNumber()).'</a>';
         }
         return $this->escapeHtml($_item->getNumber());
