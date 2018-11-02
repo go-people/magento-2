@@ -7,6 +7,8 @@
 
 namespace GoPeople\Shipping\Cron;
 
+use GoPeople\Shipping\Model\Carrier;
+
 class SynchroniseOrders 
 {
 
@@ -62,7 +64,7 @@ class SynchroniseOrders
      */
     public function execute()
     {
-        $this->_collection->addFieldToFilter('shipping_method',['like' => $this->_carrier::CODE.'_%'])
+        $this->_collection->addFieldToFilter('shipping_method',['like' => Carrier::CODE.'_%'])
                    ->addFieldToFilter('gopeople_cart_id',['null' => true])
                    ->addFieldToFilter('state',\Magento\Sales\Model\Order::STATE_PROCESSING)
                    ->addFieldToFilter('created_at',['to' => date('Y-m-d H:i:s', $this->_date->timestamp()-(5*60))]);//test whether local or UTC time

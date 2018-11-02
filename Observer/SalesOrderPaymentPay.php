@@ -9,10 +9,11 @@
 
 namespace GoPeople\Shipping\Observer;
 
-use \Magento\Framework\Event\Observer;
-use \Magento\Framework\Event\ObserverInterface;
-use \Magento\Sales\Model\Order;
-use \Magento\Store\Model\ScopeInterface;
+use Magento\Framework\Event\Observer;
+use Magento\Framework\Event\ObserverInterface;
+use Magento\Sales\Model\Order;
+use Magento\Store\Model\ScopeInterface;
+use GoPeople\Shipping\Model\Carrier;
 
 class SalesOrderPaymentPay implements ObserverInterface 
 {
@@ -50,8 +51,8 @@ class SalesOrderPaymentPay implements ObserverInterface
         $order = $invoice->getOrder();
         $shipping = $order->getShippingAddress();
         $method = $order->getShippingMethod();
-        $code_l = strlen($this->_carrier::CODE);
-        if(substr($method,0,$code_l) == $this->_carrier::CODE){
+        $code_l = strlen(Carrier::CODE);
+        if(substr($method,0,$code_l) == Carrier::CODE){
             $method = str_replace('-',' ',substr($method,$code_l+1));
 
             $parcels = [];
