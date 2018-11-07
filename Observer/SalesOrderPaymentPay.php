@@ -53,6 +53,10 @@ class SalesOrderPaymentPay implements ObserverInterface
         $method = $order->getShippingMethod();
         $code_l = strlen(Carrier::CODE);
         if(substr($method,0,$code_l) == Carrier::CODE){
+            $name = $order->getShippingDescription();
+            $title = $this->_carrier->getConfigData('title');
+            $title_l = strlen($title);
+            if(substr($name,0,$title_l) == $title) $name = substr($name,$title_l+3);
 
             $parcels = [];
             foreach($order->getAllItems() as $item){
@@ -85,7 +89,7 @@ class SalesOrderPaymentPay implements ObserverInterface
                     'companyName'   => $shipping->getCompany()
                 ],
                 'parcels'      => $parcels,
-                'shippingName' => $order->getShippingDescription(),
+                'shippingName' => $name,
             ];
 
             $request = new \Zend\Http\Request();
